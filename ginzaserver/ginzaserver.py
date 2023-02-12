@@ -93,7 +93,8 @@ class GinzaHttpRequestHandler(BaseHTTPRequestHandler):
 class GinzaHttpServer(ThreadingMixIn, HTTPServer):
     def __init__(self, address, handlerClass=GinzaHttpRequestHandler):
         print("init GinzaHttpServer")
-        handlerClass.nlp = spacy.load("ja_ginza")
+        # handlerClass.nlp = spacy.load("ja_ginza") # 従来型モデル
+        handlerClass.nlp = spacy.load("ja_ginza_electra") # ja_ginza_electra
         super().__init__(address, handlerClass)
 
 def main():
