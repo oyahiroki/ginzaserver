@@ -16,11 +16,16 @@ import threading
 import sys
 import time
 
+import datetime
+
 class GinzaHttpRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server):
 #        print("init request handler")
 #        self.nlp = spacy.load("ja_ginza")
         BaseHTTPRequestHandler.__init__(self,request,client_address,server)
+    
+    def log_message(self, format, *args):
+    	pass
     
     def myProcess(self, text):
         try:
@@ -81,7 +86,7 @@ class GinzaHttpRequestHandler(BaseHTTPRequestHandler):
             html = json.dumps(res)
             self.wfile.write(html.encode())
             time2 = time.time()
-            print("process time: " + str( (time2 - time1) * 1000 ))
+            print( datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S") + ", time=" + str( (time2 - time1) * 1000 ) + ", text.length=" + str(len(text)) + ", text[0:8]=" + text[0:8])
             return
         except:
             print(traceback.format_exc())
@@ -130,6 +135,7 @@ class GinzaHttpServer(ThreadingMixIn, HTTPServer):
         # http://127.0.0.1:8888/?text=%E3%81%93%E3%82%8C%E3%81%AF%E3%83%86%E3%82%B9%E3%83%88%E3%81%A7%E3%81%99%E3%80%82
         print("http://" + address[0] + ":" + str(address[1]) + "/?text=これはテストです。")
         print("http://" + address[0] + ":" + str(address[1]) + "/?text=%E3%81%93%E3%82%8C%E3%81%AF%E3%83%86%E3%82%B9%E3%83%88%E3%81%A7%E3%81%99%E3%80%82")
+        print("curl -X POST -H \"Content-Type: application/json\" -d \"{\\\"text\\\":\\\"これはテストです。\\\"}\" http://" + address[0] + ":" + str(address[1]) + "/")
         
         # 解析精度重視モデル (メモリ容量16GB以上を推奨)
         # pip install -U ginza ja_ginza_electra
@@ -153,17 +159,16 @@ def main():
     option = 0
     
     args = sys.argv[1:]
-    if (len(args)==0):
-    	print("option: 0")
-    elif(len(args)==1):
-    	opt = args[0]
-    	if(opt=='?'):
-    		print("?")
-    		return
-    	elif(opt=='1'):
-    		option = 1
+    if (len(args)!=2):
+    	print("help: ginzaserver port_number option(0: use ja_ginza, 1: use ja_ginza_electra)")
+    	print("example: ginzaserver 8888 0")
+    	return
     else:
-    	print("options: 0 (default,ja_ginza), 1 (ja_ginza_electra)")
+    	port = int(args[0])
+    	option = int(args[1])
+    	if(option != 0 and option != 1):
+    		print("option(0: use ja_ginza, 1: use ja_ginza_electra)");
+    		return
     # MEMO: WSL, Container からの localhost リクエストを受け付けるには工夫が必要
     server = GinzaHttpServer((ip,port),GinzaHttpRequestHandler,option)
     try:
