@@ -2,6 +2,8 @@
 
 HTTP Server for GiNZA - Japanese NLP Library
 
+https://megagonlabs.github.io/ginza/
+
 # Install
 
 ```
