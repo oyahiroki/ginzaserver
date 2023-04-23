@@ -13,6 +13,9 @@ import traceback
 from socketserver import ThreadingMixIn
 import threading
 
+import sys
+import time
+
 class GinzaHttpRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server):
 #        print("init request handler")
@@ -21,6 +24,7 @@ class GinzaHttpRequestHandler(BaseHTTPRequestHandler):
     
     def myProcess(self, text):
         try:
+            time1 = time.time()
             doc = self.nlp(text)
             res = {}
             sents = []
@@ -76,6 +80,8 @@ class GinzaHttpRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             html = json.dumps(res)
             self.wfile.write(html.encode())
+            time2 = time.time()
+            print("process time: " + str( (time2 - time1) * 1000 ))
             return
         except:
             print(traceback.format_exc())
@@ -104,12 +110,11 @@ class GinzaHttpRequestHandler(BaseHTTPRequestHandler):
 #        print("query=" + query)
 
         qs_d = urllib.parse.parse_qs(query)
-        print(qs_d)
-        print('has attribute text:' + str(hasattr(qs_d,"text")))
-        print("text" in qs_d)
+        # print(qs_d)
+        # print('has attribute text:' + str(hasattr(qs_d,"text")))
+        # print("text" in qs_d)
         # check parameter
         if ("text" in qs_d) == False:
-            print("hi2")
             self.send_response(404)
             self.end_headers()
             return
@@ -117,24 +122,50 @@ class GinzaHttpRequestHandler(BaseHTTPRequestHandler):
         text = qs_d["text"][0]
         # decode requested value
         text = urllib.parse.unquote(text)
-        print(text)
         self.myProcess(text)
 
 class GinzaHttpServer(ThreadingMixIn, HTTPServer):
-    def __init__(self, address, handlerClass=GinzaHttpRequestHandler):
+    def __init__(self, address, handlerClass=GinzaHttpRequestHandler, option=0):
         print("init GinzaHttpServer")
         # http://127.0.0.1:8888/?text=%E3%81%93%E3%82%8C%E3%81%AF%E3%83%86%E3%82%B9%E3%83%88%E3%81%A7%E3%81%99%E3%80%82
         print("http://" + address[0] + ":" + str(address[1]) + "/?text=これはテストです。")
         print("http://" + address[0] + ":" + str(address[1]) + "/?text=%E3%81%93%E3%82%8C%E3%81%AF%E3%83%86%E3%82%B9%E3%83%88%E3%81%A7%E3%81%99%E3%80%82")
+        
+        # 解析精度重視モデル (メモリ容量16GB以上を推奨)
+        # pip install -U ginza ja_ginza_electra
+        # 実行速度重視モデル
+        # pip install -U ginza ja_ginza
         # handlerClass.nlp = spacy.load("ja_ginza") # 従来型モデル
-        handlerClass.nlp = spacy.load("ja_ginza_electra") # ja_ginza_electra
+        # handlerClass.nlp = spacy.load("ja_ginza_electra") # ja_ginza_electra
+        
+        if (option == 1):
+            handlerClass.nlp = spacy.load("ja_ginza_electra") # ja_ginza_electra (40-50ms)
+            print("Running ja_ginza_electra")
+        else:
+            handlerClass.nlp = spacy.load("ja_ginza") # 従来型モデル (10-20ms)
+            print("Running ja_ginza")
+        
         super().__init__(address, handlerClass)
 
 def main():
     ip = '127.0.0.1'
     port = 8888
+    option = 0
+    
+    args = sys.argv[1:]
+    if (len(args)==0):
+    	print("option: 0")
+    elif(len(args)==1):
+    	opt = args[0]
+    	if(opt=='?'):
+    		print("?")
+    		return
+    	elif(opt=='1'):
+    		option = 1
+    else:
+    	print("options: 0 (default,ja_ginza), 1 (ja_ginza_electra)")
     # MEMO: WSL, Container からの localhost リクエストを受け付けるには工夫が必要
-    server = GinzaHttpServer((ip,port),GinzaHttpRequestHandler)
+    server = GinzaHttpServer((ip,port),GinzaHttpRequestHandler,option)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
