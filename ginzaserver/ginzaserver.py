@@ -144,10 +144,19 @@ class GinzaHttpServer(ThreadingMixIn, HTTPServer):
         # handlerClass.nlp = spacy.load("ja_ginza") # 従来型モデル
         # handlerClass.nlp = spacy.load("ja_ginza_electra") # ja_ginza_electra
         
+        # $ nvcc -V
+        # $ pip install -U spacy[cuda115]
+        
+        
         if (option == 1):
             handlerClass.nlp = spacy.load("ja_ginza_electra") # ja_ginza_electra (40-50ms)
             print("Running ja_ginza_electra")
         else:
+            # TODO: GPU Support
+            # if spacy.prefer_gpu():
+            #    spacy.require_gpu()
+            # else:
+            #     pass
             handlerClass.nlp = spacy.load("ja_ginza") # 従来型モデル (10-20ms)
             print("Running ja_ginza")
         
