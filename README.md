@@ -6,14 +6,20 @@ https://megagonlabs.github.io/ginza/
 
 # Install
 
+## Install GiNZA
+
 ```
 pip install -U ginza ja_ginza
 pip install -U ginza ja_ginza_electra
+```
+
+## Install gizaserver as command
+
+```
 pip install git+https://github.com/oyahiroki/ginzaserver
 ```
 
-
-# How to Run
+# How to Run command
 
 ginzaserver port option
 
@@ -48,5 +54,13 @@ python ginzaserver.py 8888 0
 ```
 
 .
+
+
+# Note
+
+```
+dmesg -T| grep -E -i -B100 'killed process'
+```
+
 
 

@@ -18,175 +18,193 @@ import time
 
 import datetime
 
+import signal
+
+def sig_handler(signum, frame) -> None:
+	sys.exit(1)
+
 class GinzaHttpRequestHandler(BaseHTTPRequestHandler):
-    def __init__(self, request, client_address, server):
+
+	count = 0
+	
+	def __init__(self, request, client_address, server):
 #        print("init request handler")
 #        self.nlp = spacy.load("ja_ginza")
-        BaseHTTPRequestHandler.__init__(self,request,client_address,server)
-    
-    def log_message(self, format, *args):
-    	pass
-    
-    def myProcess(self, text):
-        try:
-            time1 = time.time()
-            doc = self.nlp(text)
-            res = {}
-            sents = []
-            res["type"] = "doc"
-            res["sents"] = sents
-            
-            for sent in doc.sents:
-                ss = {} # sentence
-                sents.append(ss)
-                tokens = []
-                ss["tokens"] = tokens
-                for token in sent:
-                    tk = {}
-                    tk["i"] = token.i
-                    tk["orth"] = token.orth_
-                    tk["tag"] = token.tag_
-                    tk["pos"] = token.pos_
-                    tk["lemma"] = token.lemma_
-                    tk["head.i"] = token.head.i
-                    tk["dep"] = token.dep_
-                    tokens.append(tk)
+		BaseHTTPRequestHandler.__init__(self,request,client_address,server)
+	
+	def log_message(self, format, *args):
+		pass
+	
+	def myProcess(self, text):
+		GinzaHttpRequestHandler.count += 1
+		try:
+			time1 = time.time()
+			doc = self.nlp(text)
+			res = {}
+			sents = []
+			res["type"] = "doc"
+			res["sents"] = sents
+			
+			for sent in doc.sents:
+				ss = {} # sentence
+				sents.append(ss)
+				tokens = []
+				ss["tokens"] = tokens
+				for token in sent:
+					tk = {}
+					tk["i"] = token.i
+					tk["orth"] = token.orth_
+					tk["tag"] = token.tag_
+					tk["pos"] = token.pos_
+					tk["lemma"] = token.lemma_
+					tk["head.i"] = token.head.i
+					tk["dep"] = token.dep_
+					tokens.append(tk)
 
-            # for sent in doc.sents:
-            #     resx = {}
-            #     res.append(resx)
-            #     # print(type(sent.raw))
-            #     # res.append(sent.raw)
-            #     pps = []
-            #     resx["paragraphs"] = pps
-            #     pgps = {}
-            #     pps.append(pgps)
-            #     sts = []
-            #     pgps["sentences"] = sts
-            #     stcs = {}
-            #     sts.append(stcs)
-            #     pgps["raw"] = sent.text
-            #     tokens = []
-            #     stcs["tokens"] = tokens
-            #     # res.append(tokens)
-            #     for token in sent:
-            #         tk = {}
-            #         tk["id"] = token.i
-            #         tk["orth"] = token.orth_
-            #         tk["tag"] = token.tag_
-            #         tk["pos"] = token.pos_
-            #         tk["lemma"] = token.lemma_
-            #         tk["head"] = token.head.i
-            #         tk["dep"] = token.dep_
-            #         tokens.append(tk)
+			# for sent in doc.sents:
+			#     resx = {}
+			#     res.append(resx)
+			#     # print(type(sent.raw))
+			#     # res.append(sent.raw)
+			#     pps = []
+			#     resx["paragraphs"] = pps
+			#     pgps = {}
+			#     pps.append(pgps)
+			#     sts = []
+			#     pgps["sentences"] = sts
+			#     stcs = {}
+			#     sts.append(stcs)
+			#     pgps["raw"] = sent.text
+			#     tokens = []
+			#     stcs["tokens"] = tokens
+			#     # res.append(tokens)
+			#     for token in sent:
+			#         tk = {}
+			#         tk["id"] = token.i
+			#         tk["orth"] = token.orth_
+			#         tk["tag"] = token.tag_
+			#         tk["pos"] = token.pos_
+			#         tk["lemma"] = token.lemma_
+			#         tk["head"] = token.head.i
+			#         tk["dep"] = token.dep_
+			#         tokens.append(tk)
 
-            self.send_response(200)
-            self.send_header("Content-type","application/json; charset=utf-8")
-            self.end_headers()
-            html = json.dumps(res)
-            self.wfile.write(html.encode())
-            time2 = time.time()
-            print( datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S") + ", time=" + str( (time2 - time1) * 1000 ) + ", text.length=" + str(len(text)) + ", text[0:8]=" + text[0:8])
-            return
-        except:
-            print(traceback.format_exc())
-            self.send_response(500)
+			self.send_response(200)
+			self.send_header("Content-type","application/json; charset=utf-8")
+			self.end_headers()
+			html = json.dumps(res)
+			# wfile Contains the output stream for writing a response back to the client. Proper adherence to the HTTP protocol must be used when writing to this stream in order to achieve successful interoperation with HTTP clients.
+			self.wfile.write(html.encode())
+			self.close_connection = True
+			time2 = time.time()
+			# print( datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S") + ", time=" + str( (time2 - time1) * 1000 ) + ", text.length=" + str(len(text)) + ", text[0:8]=" + text[0:8])
+			print( datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S") + "," + "{:9}".format(GinzaHttpRequestHandler.count) + ", time=" + "{:6.2f}".format( (time2 - time1) * 1000 ) + ", text.length=" + str(len(text)) + ", text[0:8]=" + text[0:8])
+			del html
+			del res
+			del doc
+			del time2
+			del time1
+			return
+		except:
+			print(traceback.format_exc())
+			self.send_response(500)
 
-    def do_POST(self):
-        try:
+	def do_POST(self):
+		try:
 #            print(self.headers)
-            content_length = int(self.headers.get('content-length'))
-            requestbody = json.loads(self.rfile.read(content_length).decode('utf-8'))
-            text = requestbody.get('text')
-            self.myProcess(text)
+			content_length = int(self.headers.get('content-length'))
+			requestbody = json.loads(self.rfile.read(content_length).decode('utf-8'))
+			text = requestbody.get('text')
+			self.myProcess(text)
 #            print('text: ' + text )
-        except Exception as e:
-            print(e)
-            self.send_response(500)
-            self.send_header('Content-type','application/json')
-            self.end_headers()
-            response = {}
-            responsebody = json.dumps(response)
-            self.wfile.write(responsebody.encode('utf-8'))
-    
+		except Exception as e:
+			print(e)
+			self.send_response(500)
+			self.send_header('Content-type','application/json')
+			self.end_headers()
+			response = {}
+			responsebody = json.dumps(response)
+			self.wfile.write(responsebody.encode('utf-8'))
+	
 
-    def do_GET(self):
-        query = urlparse(self.path).query
+	def do_GET(self):
+		query = urlparse(self.path).query
 #        print("query=" + query)
 
-        qs_d = urllib.parse.parse_qs(query)
-        # print(qs_d)
-        # print('has attribute text:' + str(hasattr(qs_d,"text")))
-        # print("text" in qs_d)
-        # check parameter
-        if ("text" in qs_d) == False:
-            self.send_response(404)
-            self.end_headers()
-            return
-        
-        text = qs_d["text"][0]
-        # decode requested value
-        text = urllib.parse.unquote(text)
-        self.myProcess(text)
+		qs_d = urllib.parse.parse_qs(query)
+		# print(qs_d)
+		# print('has attribute text:' + str(hasattr(qs_d,"text")))
+		# print("text" in qs_d)
+		# check parameter
+		if ("text" in qs_d) == False:
+			self.send_response(404)
+			self.end_headers()
+			return
+		
+		text = qs_d["text"][0]
+		# decode requested value
+		text = urllib.parse.unquote(text)
+		self.myProcess(text)
 
 class GinzaHttpServer(ThreadingMixIn, HTTPServer):
-    def __init__(self, address, handlerClass=GinzaHttpRequestHandler, option=0):
-        print("init GinzaHttpServer")
-        # http://127.0.0.1:8888/?text=%E3%81%93%E3%82%8C%E3%81%AF%E3%83%86%E3%82%B9%E3%83%88%E3%81%A7%E3%81%99%E3%80%82
-        print("http://" + address[0] + ":" + str(address[1]) + "/?text=これはテストです。")
-        print("http://" + address[0] + ":" + str(address[1]) + "/?text=%E3%81%93%E3%82%8C%E3%81%AF%E3%83%86%E3%82%B9%E3%83%88%E3%81%A7%E3%81%99%E3%80%82")
-        print("curl -X POST -H \"Content-Type: application/json\" -d \"{\\\"text\\\":\\\"これはテストです。\\\"}\" http://" + address[0] + ":" + str(address[1]) + "/")
-        
-        # 解析精度重視モデル (メモリ容量16GB以上を推奨)
-        # pip install -U ginza ja_ginza_electra
-        # 実行速度重視モデル
-        # pip install -U ginza ja_ginza
-        # handlerClass.nlp = spacy.load("ja_ginza") # 従来型モデル
-        # handlerClass.nlp = spacy.load("ja_ginza_electra") # ja_ginza_electra
-        
-        # $ nvcc -V
-        # $ pip install -U spacy[cuda115]
-        
-        
-        if (option == 1):
-            handlerClass.nlp = spacy.load("ja_ginza_electra") # ja_ginza_electra (40-50ms)
-            print("Running ja_ginza_electra")
-        else:
-            # TODO: GPU Support
-            # if spacy.prefer_gpu():
-            #    spacy.require_gpu()
-            # else:
-            #     pass
-            handlerClass.nlp = spacy.load("ja_ginza") # 従来型モデル (10-20ms)
-            print("Running ja_ginza")
-        
-        super().__init__(address, handlerClass)
+	def __init__(self, address, handlerClass=GinzaHttpRequestHandler, option=0):
+		print("init GinzaHttpServer")
+		# http://127.0.0.1:8888/?text=%E3%81%93%E3%82%8C%E3%81%AF%E3%83%86%E3%82%B9%E3%83%88%E3%81%A7%E3%81%99%E3%80%82
+		print("http://" + address[0] + ":" + str(address[1]) + "/?text=これはテストです。")
+		print("http://" + address[0] + ":" + str(address[1]) + "/?text=%E3%81%93%E3%82%8C%E3%81%AF%E3%83%86%E3%82%B9%E3%83%88%E3%81%A7%E3%81%99%E3%80%82")
+		print("curl -X POST -H \"Content-Type: application/json\" -d \"{\\\"text\\\":\\\"これはテストです。\\\"}\" http://" + address[0] + ":" + str(address[1]) + "/")
+		
+		# 解析精度重視モデル (メモリ容量16GB以上を推奨)
+		# pip install -U ginza ja_ginza_electra
+		# 実行速度重視モデル
+		# pip install -U ginza ja_ginza
+		# handlerClass.nlp = spacy.load("ja_ginza") # 従来型モデル
+		# handlerClass.nlp = spacy.load("ja_ginza_electra") # ja_ginza_electra
+		
+		# $ nvcc -V
+		# $ pip install -U spacy[cuda115]
+		
+		
+		if (option == 1):
+			handlerClass.nlp = spacy.load("ja_ginza_electra") # ja_ginza_electra (40-50ms)
+			print("Running ja_ginza_electra")
+		else:
+			# TODO: GPU Support
+			# if spacy.prefer_gpu():
+			#    spacy.require_gpu()
+			# else:
+			#     pass
+			handlerClass.nlp = spacy.load("ja_ginza") # 従来型モデル (10-20ms)
+			print("Running ja_ginza")
+		
+		super().__init__(address, handlerClass)
 
 def main():
-    ip = '127.0.0.1'
-    port = 8888
-    option = 0
-    
-    args = sys.argv[1:]
-    if (len(args)!=2):
-    	print("help: ginzaserver port_number option(0: use ja_ginza, 1: use ja_ginza_electra)")
-    	print("example: ginzaserver 8888 0")
-    	return
-    else:
-    	port = int(args[0])
-    	option = int(args[1])
-    	if(option != 0 and option != 1):
-    		print("option(0: use ja_ginza, 1: use ja_ginza_electra)");
-    		return
-    # MEMO: WSL, Container からの localhost リクエストを受け付けるには工夫が必要
-    server = GinzaHttpServer((ip,port),GinzaHttpRequestHandler,option)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
+	signal.signal(signal.SIGTERM, sig_handler)
+	ip = '127.0.0.1'
+	port = 8888
+	option = 0
+	
+	args = sys.argv[1:]
+	if (len(args)!=2):
+		print("help: ginzaserver port_number option(0: use ja_ginza, 1: use ja_ginza_electra)")
+		print("example: ginzaserver 8888 0")
+		return
+	else:
+		port = int(args[0])
+		option = int(args[1])
+		if(option != 0 and option != 1):
+			print("option(0: use ja_ginza, 1: use ja_ginza_electra)");
+			return
+	# MEMO: WSL, Container からの localhost リクエストを受け付けるには工夫が必要
+	server = GinzaHttpServer((ip,port),GinzaHttpRequestHandler,option)
+	try:
+		server.serve_forever()
+	except KeyboardInterrupt:
+		pass
+	finally:
+		server.server_close()
 
 
 if __name__ == '__main__':
-    main()
+	main()
